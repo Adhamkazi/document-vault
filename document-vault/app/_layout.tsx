@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { useEffect } from "react";
 import { initializeDatabase } from "@/src/database/folderRepository";
+import { initializeDocumentsTable } from "@/src/database/documentRepository";
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -15,6 +16,7 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   useEffect(() => {
     initializeDatabase();
+    initializeDocumentsTable()
   }, []);
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
