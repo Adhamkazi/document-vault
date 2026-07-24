@@ -1,6 +1,5 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-
 import { HapticTab } from '@/components/haptic-tab';
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from '@/constants/theme';
@@ -17,7 +16,7 @@ export default function TabLayout() {
         tabBarButton: HapticTab,
       }}>
       <Tabs.Screen
-              name="index"
+              name="dashboard"
               options={{
                 title: "Dashboard",
                 tabBarIcon: ({ color,size }) => (
@@ -25,33 +24,6 @@ export default function TabLayout() {
                 ),
               }}
             />
-      <Tabs.Screen
-        name="documents"
-        options={{
-          title: "Documents",
-          tabBarIcon: ({ color,size }) => (
-                <Ionicons name="folder" size={size} color={color} />
-                ),
-        }}
-      />
-      <Tabs.Screen
-        name="family"
-        options={{
-          title: "Family",
-          tabBarIcon: ({ color,size }) => (
-                <Ionicons name="people" size={size} color={color} />
-                ),
-        }}
-      />
-       <Tabs.Screen
-        name="settings"
-        options={{
-          title: "Settings",
-          tabBarIcon: ({ color,size }) => (
-                <Ionicons name="settings" size={size} color={color} />
-                ),
-        }}
-      />
     </Tabs>
   );
 }

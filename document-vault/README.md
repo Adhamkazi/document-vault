@@ -1,50 +1,40 @@
-# Welcome to your Expo app 👋
+# DocumentVault
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+DocumentVault is a local-first React Native (Expo) mobile application designed for families to securely store, organize, and manage critical personal documents (e.g., Aadhar Card, PAN Card, Passports, Driving Licenses, Insurance policies).
 
-## Get started
+## 📄 Documentation & Project Specification
 
-1. Install dependencies
+Detailed architecture, database schemas, directory layout, requirements, and implementation steps are documented in **[PROJECT_SPECIFICATION.md](PROJECT_SPECIFICATION.md)**.
 
-   ```bash
-   npm install
-   ```
+## 🚀 Getting Started
 
-2. Start the app
+### Prerequisites
+- Node.js (v18+)
+- Expo Go or Android Emulator / iOS Simulator
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
+### 1. Install Dependencies
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 2. Run Development Server
+```bash
+npx expo start
+```
 
-## Learn more
+For Android emulator:
+```bash
+npm run android
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+For iOS simulator:
+```bash
+npm run ios
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## 🛠️ Built With
+- **Framework:** Expo ~54.0 / React Native 0.81
+- **Router:** Expo Router ~6.0 (File-based navigation)
+- **Local Database:** Expo SQLite ~16.0
+- **Security:** Expo SecureStore & `bcryptjs`
+- **File System:** Expo FileSystem, Expo DocumentPicker, Expo ImagePicker

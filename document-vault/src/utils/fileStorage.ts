@@ -1,4 +1,7 @@
 import { Directory, File, Paths } from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
+
+
 
 export async function saveFileToAppStorage(
   sourceUri: string,
@@ -17,4 +20,16 @@ export async function saveFileToAppStorage(
   // Copy the file
   source.copy(destination);
   return destination.uri;
+}
+
+export async function deleteFile(uri: string) {
+  try {
+    const fileInfo = await FileSystem.getInfoAsync(uri);
+
+    if (fileInfo.exists) {
+      await FileSystem.deleteAsync(uri);
+    }
+  } catch (error) {
+    console.log("Failed to delete file:", error);
+  }
 }
