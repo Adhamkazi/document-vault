@@ -1,13 +1,4 @@
-import bcrypt from "bcryptjs";
-
-bcrypt.setRandomFallback((len) => {
-  const buf = [];
-  for (let i = 0; i < len; i++) {
-    buf.push(Math.floor(Math.random() * 256));
-  }
-  return buf;
-});
-
+import { verifyPassword } from "@/src/utils/password";
 import { getUserByEmail } from "@/src/database/userRepository";
 import { getOwnerProfile } from "@/src/database/profileRepository";
 import { saveUserSession } from "@/src/utils/authStorage";
@@ -37,7 +28,7 @@ export async function loginUser(
     }
 
     // Verify password
-    const validPassword = await bcrypt.compare(
+    const validPassword = await verifyPassword(
       data.password,
       user.passwordHash
     );

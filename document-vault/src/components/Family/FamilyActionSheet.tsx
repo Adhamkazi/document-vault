@@ -1,66 +1,84 @@
-import React, { forwardRef } from "react";
+import React, {
+  forwardRef,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import BottomSheet from "@gorhom/bottom-sheet";
 
 import ActionSheet, {
   ActionItem,
 } from "@/src/components/ActionSheet";
+
 import type { Profile } from "@/src/types/profile";
 
-type Props = {
-  profile: Profile | null;
-  isCurrent: boolean;
+export type FamilyActionSheetRef = {
+  open: (profile: Profile, isCurrent: boolean) => void;
+};
 
+type Props = {
   onSwitch: (profile: Profile) => void;
   onEdit: (profile: Profile) => void;
   onDelete: (profile: Profile) => void;
 };
 
-const FamilyActionSheet = forwardRef<BottomSheet, Props>(
-  (
-    {
-      profile,
-      isCurrent,
-      onSwitch,
-      onEdit,
-      onDelete,
+const FamilyActionSheet = forwardRef<
+  FamilyActionSheetRef,
+  Props
+>(({ onSwitch, onEdit, onDelete }, ref) => {
+  const sheetRef = useRef<BottomSheet>(null);
+
+  const [selectedProfile, setSelectedProfile] =
+    useState<Profile | null>(null);
+
+  const [isCurrentProfile, setIsCurrentProfile] =
+    useState(false);
+
+  useImperativeHandle(ref, () => ({
+    open(profile, isCurrent) {
+      setSelectedProfile(profile);
+      setIsCurrentProfile(isCurrent);
+
+      requestAnimationFrame(() => {
+        sheetRef.current?.expand();
+      });
     },
-    ref
-  ) => {
-    if (!profile) return null;
+  }));
 
-    const actions: ActionItem[] = [];
+  const actions: ActionItem[] = [];
 
-    if (!isCurrent) {
+  if (selectedProfile) {
+    if (!isCurrentProfile) {
       actions.push({
         title: "Switch Profile",
         icon: "swap-horizontal-outline",
-        onPress: () => onSwitch(profile),
+        onPress: () => onSwitch(selectedProfile),
       });
     }
 
     actions.push({
       title: "Edit Profile",
       icon: "create-outline",
-      onPress: () => onEdit(profile),
+      onPress: () => onEdit(selectedProfile),
     });
 
-    if (!profile.isOwner) {
+    if (!selectedProfile.isOwner) {
       actions.push({
         title: "Delete Profile",
         icon: "trash-outline",
         destructive: true,
-        onPress: () => onDelete(profile),
+        onPress: () => onDelete(selectedProfile),
       });
     }
-
-    return (
-      <ActionSheet
-        ref={ref}
-        title={profile.name}
-        actions={actions}
-      />
-    );
   }
-);
+
+  return (
+    <ActionSheet
+      ref={sheetRef}
+      title={selectedProfile?.name ?? ""}
+      actions={actions}
+    />
+  );
+});
 
 export default FamilyActionSheet;

@@ -13,17 +13,15 @@ Notifications.setNotificationHandler({
   }),
 });
 
-
-
-
 export async function registerForPushNotifications() {
-//   if (!Device.isDevice) {
-//     return false;
-//   }
 
-if (!Device.isDevice) {
-  console.log("Running on emulator");
-}
+  if (!Device.isDevice) {
+    return false;
+  }
+
+// if (!Device.isDevice) {
+//   console.log("Running on emulator");
+// }
 
   const { status: existingStatus } =
     await Notifications.getPermissionsAsync();
@@ -107,27 +105,21 @@ export async function scheduleDocumentExpiryNotification({
 
     ids.push(id);
   }
-
-  const scheduled =
-    await Notifications.getAllScheduledNotificationsAsync();
-
   return ids;
 }
-export async function cancelDocumentNotification(
-  notificationIds?: string | null
-) {
-  if (!notificationIds) return;
 
+export async function cancelDocumentNotification(
+  notificationIds?: string |null
+) {
+  if (!notificationIds) {
+    return;
+  }
   try {
     const ids: string[] = JSON.parse(notificationIds);
-
     for (const id of ids) {
       await Notifications.cancelScheduledNotificationAsync(id);
     }
   } catch (error) {
-    console.log(
-      "Failed to cancel notifications:",
-      error
-    );
+    console.log("❌ Failed to cancel notifications", error);
   }
 }

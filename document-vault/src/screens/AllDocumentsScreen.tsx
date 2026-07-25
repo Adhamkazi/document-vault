@@ -3,9 +3,12 @@ import {
   FlatList,
   StyleSheet,
   Text,
+  TouchableOpacity,
+  View,
   Alert
 } from "react-native";
 import { useFocusEffect, router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/src/constants/colors";
 import { getCurrentProfileId } from "@/src/utils/authStorage";
 import {
@@ -80,9 +83,16 @@ export default function DocumentsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>
-        My Documents
-      </Text>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="chevron-back" size={24} color={Colors.text} />
+        </TouchableOpacity>
+        <Text style={styles.title}>My Documents</Text>
+      </View>
 
       <FlatList
         data={documents}
@@ -110,8 +120,10 @@ export default function DocumentsScreen() {
         ListEmptyComponent={<EmptyDocuments />}
       />
       <DocumentActionSheet
-          ref={actionSheetRef}
+         ref={actionSheetRef}
          onDelete={handleDeleteDocument}
+         showOption = {true}
+
       />
     </SafeAreaView>
   );
@@ -123,12 +135,27 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
 
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    paddingHorizontal: 20,
-    paddingTop: 20,
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingTop: 16,
     paddingBottom: 10,
+  },
+
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#F3F4F6",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 8,
+  },
+
+  title: {
+    fontSize: 26,
+    fontWeight: "700",
     color: Colors.text,
   },
 });

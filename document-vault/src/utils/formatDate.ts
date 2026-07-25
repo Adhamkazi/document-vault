@@ -14,3 +14,14 @@ export function formatDate(timestamp: number): string {
 
   return date.toLocaleDateString();
 }
+
+
+export function formatDateSimple(date?: string | null) {
+  if (!date) return "Not provided";
+
+  return new Date(date).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}

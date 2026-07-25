@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,16 +18,20 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Colors } from "@/src/constants/colors";
 import { getDocumentTypes, initializeDocumentTypesTable } from "@/src/database/documentTypeRepository";
-import { createDocument, getDocumentById, updateDocument, updateDocumentNotificationIds } from "@/src/database/documentRepository";
+import {  getDocumentById } from "@/src/database/documentRepository";
 import { getCurrentProfileId } from "@/src/utils/authStorage";
 import { pickDocument } from "@/src/utils/filePicker";
-import { saveFileToAppStorage } from "@/src/utils/fileStorage";
 import type { DocumentType } from "@/src/types/documentType";
-import uuid from "react-native-uuid";
-import { cancelDocumentNotification, scheduleDocumentExpiryNotification } from "../services/notificationService";
 import { getProfileById } from "../database/profileRepository";
 import { useLocalSearchParams } from "expo-router";
-import { File } from "expo-file-system";
+import { createDocumentWithNotifications, updateDocumentWithNotifications } from "@/src/services/documentService";
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
+import { captureDocument } from "@/src/utils/camera";
+import FileSourceActionSheet, {
+  FileSourceActionSheetRef,
+} from "@/src/components/documents/FileSourceActionSheet";
 
 
 const getCategoryIcon = (typeName: string): keyof typeof Ionicons.glyphMap => {
@@ -45,15 +49,60 @@ export default function UploadDocumentScreen() {
   const [selectedTypeId, setSelectedTypeId] = useState<string>("");
   const [showTypeModal, setShowTypeModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [dateField, setDateField] = useState< "issueDate" | "expiryDate" | null>(null);
   const [documentNumber, setDocumentNumber] = useState("");
   const [issueDate, setIssueDate] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [notes, setNotes] = useState("");
   const [selectedFile, setSelectedFile] = useState<{  uri: string;  name: string;  mimeType: string; size?: number} | null>(null);
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState({ documentType: "",  documentNumber: "", issueDate: "", expiryDate: "", file: ""});
 
-   const { documentId } = useLocalSearchParams();
+  const { documentId } = useLocalSearchParams();
+
+  const fileSourceRef =
+  useRef<FileSourceActionSheetRef>(null);
+
+  const openDatePicker = ( field: "issueDate" | "expiryDate") => 
+  {
+  setDateField(field);
+  setShowDatePicker(true);
+  };
+
+const handleCapture = async () => {
+  const image = await captureDocument();
+
+  if (!image) return;
+
+  setSelectedFile({
+    uri: image.uri,
+    name: image.fileName ?? "captured-document.jpg",
+    mimeType: image.mimeType ?? "image/jpeg",
+    size: image.fileSize,
+  });
+};
+
+  const handleDateChange = (
+  event: DateTimePickerEvent,
+  selectedDate?: Date
+) => {
+  setShowDatePicker(false);
+
+  if (!selectedDate) return;
+
+  const formatted = selectedDate
+    .toISOString()
+    .split("T")[0];
+
+  if (dateField === "issueDate") {
+    setIssueDate(formatted);
+  }
+
+  if (dateField === "expiryDate") {
+    setExpiryDate(formatted);
+  }
+};
 
   const isEdit = !!documentId;
 
@@ -110,159 +159,91 @@ export default function UploadDocumentScreen() {
     }
   };
 
- const handleSave = async () => {
+const validateForm = () => {
+   const newErrors = {
+    documentType: "",
+    documentNumber: "",
+    issueDate: "",
+    expiryDate: "",
+    file: "",
+  };
+
   if (!selectedTypeId) {
-    Alert.alert("Validation", "Please select a document type.");
-    return;
+  newErrors.documentType = "Please select a document type.";
   }
 
   if (!selectedFile) {
-    Alert.alert("Validation", "Please select a document file/image.");
-    return;
+   newErrors.file = "Please upload a document.";
   }
+
+  if (!documentNumber.trim()) {
+    newErrors.documentNumber = "Document number is required.";
+  }
+
+  if (
+    selectedType?.hasExpiry &&
+    !expiryDate.trim()
+  ) {
+    newErrors.expiryDate = "Expiry date is required.";
+  }
+
+  // If expiry exists, issue date should also exist
+  if (
+    selectedType?.hasExpiry &&
+    expiryDate &&
+    !issueDate
+  ) {
+   newErrors.issueDate  = "Issue date is required.";
+  }
+
+  if (
+    issueDate &&
+    expiryDate &&
+    new Date(issueDate) > new Date(expiryDate)
+  ) {
+   newErrors.issueDate ="Issue date cannot be after expiry date.";
+  }
+
+  setErrors(newErrors);
+
+  return !Object.values(newErrors).some(Boolean);
+};
+
+ const handleSave = async () => {
+ if (!validateForm()) return;
+ const file = selectedFile!;
 
   try {
     setSaving(true);
 
     const profileId =
-      (await getCurrentProfileId()) ?? "default-profile";
+    (await getCurrentProfileId()) ?? "default-profile";
 
     const profile = getProfileById(profileId);
-
-    const existingDocument = isEdit
-      ? getDocumentById(documentId as string)
-      : null;
-
-    const oldFileUri = existingDocument?.fileUri;
-
-    const documentDbId = isEdit
-      ? (documentId as string)
-      : (uuid.v4() as string);
 
     const title = selectedType
       ? selectedType.name
       : "Document";
 
-    // Detect whether user selected a new file
-    const isFileReplaced =
-      isEdit &&
-      existingDocument &&
-      selectedFile.uri !== existingDocument.fileUri;
+      const payload = {
+          profileId,
+          profileName: profile?.name ?? "",
+          selectedTypeId,
+          title,
+          documentNumber,
+          issueDate,
+          expiryDate,
+          notes,
+          selectedFile : file,
+        };
 
-    let storedFileUri = selectedFile.uri;
-
-    // Save file only when:
-    // 1. Adding a new document
-    // 2. User replaced the file
-    if (!isEdit || isFileReplaced) {
-      storedFileUri = await saveFileToAppStorage(
-        selectedFile.uri,
-        selectedFile.name
-      );
-    }
-
-    if (isEdit && existingDocument) {
-      // Cancel previous notifications
-      await cancelDocumentNotification(
-        existingDocument.notificationIds
-      );
-
-      updateDocument({
-        ...existingDocument,
-
-        documentTypeId: selectedTypeId,
-
-        title,
-
-        displayName: title,
-
-        documentNumber:
-          documentNumber.trim() || null,
-
-        issueDate:
-          issueDate.trim() || null,
-
-        expiryDate:
-          expiryDate.trim() || null,
-
-        fileName: selectedFile.name,
-        fileUri: storedFileUri,
-        mimeType: selectedFile.mimeType,
-        fileSize: selectedFile.size ?? null,
-
-        notes:
-          notes.trim() || null,
-
-        updatedAt: Date.now(),
-      });
+    if (isEdit ) {
+     await updateDocumentWithNotifications(documentId as string, payload);
 
     } else {
-      createDocument({
-        id: documentDbId,
-
-        profileId,
-
-        documentTypeId: selectedTypeId,
-
-        title,
-
-        displayName: title,
-
-        documentNumber:
-          documentNumber.trim() || null,
-
-        issueDate:
-          issueDate.trim() || null,
-
-        expiryDate:
-          expiryDate.trim() || null,
-
-        fileName: selectedFile.name,
-
-        fileUri: storedFileUri,
-
-        mimeType: selectedFile.mimeType,
-
-        fileSize: selectedFile.size ?? null,
-
-        notes:
-          notes.trim() || null,
-
-        createdAt: Date.now(),
-      });
+      await createDocumentWithNotifications(payload);
     }
 
-    // Schedule fresh notifications
-    const notificationIds =
-      await scheduleDocumentExpiryNotification({
-        title,
-        displayName: title,
-        profileName: profile?.name ?? "",
-        expiryDate:
-          expiryDate.trim() || null,
-      });
-
-    updateDocumentNotificationIds(
-      documentDbId,
-      JSON.stringify(notificationIds)
-    );
-
-    // Delete old file only after everything succeeded
-      if (
-        isEdit &&
-        oldFileUri &&
-        oldFileUri !== storedFileUri
-      ) {
-        try {
-         const oldFile = new File(oldFileUri);
-
-          if (oldFile.exists) {
-            await oldFile.delete();
-          }
-        } catch (e) {
-          console.warn("Couldn't delete old file", e);
-        }
-      }
     Alert.alert(
       "Success",
       isEdit
@@ -286,6 +267,7 @@ export default function UploadDocumentScreen() {
     setSaving(false);
   }
 };
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <KeyboardAvoidingView
@@ -334,6 +316,11 @@ export default function UploadDocumentScreen() {
             </View>
             <Ionicons name="chevron-down" size={20} color={Colors.subtitle} />
           </TouchableOpacity>
+          {!!errors.documentType && (
+              <Text style={styles.errorText}>
+                  {errors.documentType}
+              </Text>
+          )}
 
           {/* 2. Document Number / ID */}
           <Text style={styles.label}>Document Number / ID</Text>
@@ -345,32 +332,75 @@ export default function UploadDocumentScreen() {
             onChangeText={setDocumentNumber}
             autoCapitalize="characters"
           />
+          {!!errors.documentNumber && (
+              <Text style={styles.errorText}>
+                  {errors.documentNumber}
+              </Text>
+          )}
 
           {/* 3. Dates Row */}
           <View style={styles.row}>
             <View style={styles.col}>
               <Text style={styles.label}>Issue Date</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor="#999"
-                value={issueDate}
-                onChangeText={setIssueDate}
-              />
-            </View>
+              <TouchableOpacity
+                  style={styles.datePickerButton}
+                  onPress={() => openDatePicker("issueDate")}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.dateText,
+                      !issueDate && styles.datePlaceholder,
+                    ]}
+                  >
+                    {issueDate || "Select Date"}
+                  </Text>
 
-            <View style={styles.col}>
-              <Text style={styles.label}>
-                Expiry Date {selectedType?.hasExpiry ? "*" : ""}
-              </Text>
-              <TextInput
-                style={styles.input}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor="#999"
-                value={expiryDate}
-                onChangeText={setExpiryDate}
-              />
+                  <Ionicons
+                    name="calendar-outline"
+                    size={20}
+                    color={Colors.subtitle}
+                  />
+                </TouchableOpacity>
+              { !!errors.issueDate && (
+                <Text style={styles.errorText}>
+                    {errors.issueDate}
+                </Text>
+              )}
+              
             </View>
+            {selectedType?.hasExpiry === 1 && (
+              <View style={styles.col}>
+                <Text style={styles.label}>
+                  Expiry Date *
+                </Text>
+               <TouchableOpacity
+                  style={styles.datePickerButton}
+                  onPress={() => openDatePicker("expiryDate")}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.dateText,
+                      !expiryDate && styles.datePlaceholder,
+                    ]}
+                  >
+                    {expiryDate || "Select Date"}
+                  </Text>
+                  <Ionicons
+                    name="calendar-outline"
+                    size={20}
+                    color={Colors.subtitle}
+                  />
+                </TouchableOpacity>
+            {!!errors.expiryDate && (
+              <Text style={styles.errorText}>
+                  {errors.expiryDate}
+              </Text>
+            )}
+              </View>
+   
+           )} 
           </View>
 
           {/* 4. Notes */}
@@ -389,7 +419,7 @@ export default function UploadDocumentScreen() {
           <Text style={styles.label}>Document File / Image *</Text>
           <TouchableOpacity
             style={styles.filePickerCard}
-            onPress={handlePickFile}
+            onPress={() => fileSourceRef.current?.open()}
             activeOpacity={0.7}
           >
             <View style={styles.filePickerIconCircle}>
@@ -420,6 +450,11 @@ export default function UploadDocumentScreen() {
               </View>
             )}
           </TouchableOpacity>
+          {!!errors.file && (
+              <Text style={styles.errorText}>
+                  {errors.file}
+              </Text>
+          )}
 
           {/* 6. Save Button */}
           <TouchableOpacity
@@ -439,6 +474,26 @@ export default function UploadDocumentScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
+      {showDatePicker && (
+          <DateTimePicker
+            value={
+              dateField === "issueDate" && issueDate
+                ? new Date(issueDate)
+                : dateField === "expiryDate" && expiryDate
+                ? new Date(expiryDate)
+                : new Date()
+            }
+            mode="date"
+            display="default"
+            onChange={handleDateChange}
+          />
+        )}
+
+      <FileSourceActionSheet
+        ref={fileSourceRef}
+        onCamera={handleCapture}
+        onDocument={handlePickFile}
+      />
       {/* Modern Document Type Selection Modal */}
       <Modal
         visible={showTypeModal}
@@ -781,4 +836,31 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#9CA3AF",
   },
+    datePickerButton: {
+    height: 52,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    backgroundColor: "#FFF",
+    paddingHorizontal: 14,
+
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  dateText: {
+    fontSize: 15,
+    color: Colors.text,
+  },
+
+  datePlaceholder: {
+    color: "#9CA3AF",
+  },
+  errorText: {
+  color: "#DC2626",
+  fontSize: 12,
+  marginTop: 4,
+  marginLeft: 4,
+},
 });

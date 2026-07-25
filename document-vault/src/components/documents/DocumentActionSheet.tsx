@@ -18,17 +18,19 @@ export type DocumentActionSheetRef = {
 type Props = {
   onDelete: (document: DocumentRecord) => void;
   onView?: (document: DocumentRecord) => void;
+  showOption? : boolean;
 };
 
 const DocumentActionSheet = forwardRef<
   DocumentActionSheetRef,
   Props
->(({ onDelete }, ref) => {
+>(({ onDelete, showOption }, ref) => {
 
   const sheetRef = useRef<BottomSheet>(null);
 
   const [selectedDocument, setSelectedDocument] =
     useState<DocumentRecord | null>(null);
+    
 
   useImperativeHandle(ref, () => ({
     open(document) {
@@ -77,19 +79,23 @@ const handleShare = async () => {
       ref={sheetRef}
       title={selectedDocument.title}
       actions={[
-        {
-          title: "View",
-          onPress: () => {
-            sheetRef.current?.close();
+        ...(showOption
+          ? [
+              {
+                title: "View",
+                onPress: () => {
+                  sheetRef.current?.close();
 
-            router.push({
-              pathname: "/viewer",
-              params: {
-                id: selectedDocument.id,
+                  router.push({
+                    pathname: "/viewer",
+                    params: {
+                      id: selectedDocument.id,
+                    },
+                  });
+                },
               },
-            });
-          },
-        },
+            ]
+          : []),
         {
           title: "Edit",
           onPress: () => {

@@ -18,7 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Alert } from "react-native";
 import { setCurrentProfileId } from "@/src/utils/authStorage";
 import BottomSheet from "@gorhom/bottom-sheet";
-import FamilyActionSheet from "../components/Family/FamilyActionSheet";
+import FamilyActionSheet, { FamilyActionSheetRef } from "../components/Family/FamilyActionSheet";
 import { showSuccess,showError } from "@/src/utils/toast";
 import { removeFamilyMember } from "../services/addFamilyService";
 
@@ -27,9 +27,7 @@ export default function FamilyMembersScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [currentProfileId, setCurrentProfileIdState] = useState("");
 
-  const sheetRef = useRef<BottomSheet>(null);
-  const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
-
+const sheetRef = useRef<FamilyActionSheetRef>(null);
 
   const loadProfiles = useCallback(async () => {
     try {
@@ -59,10 +57,12 @@ export default function FamilyMembersScreen() {
     setRefreshing(false);
   };
 
-const handleProfilePress = (profile: Profile) => {
-  setSelectedProfile(profile);
-  sheetRef.current?.expand();
-};
+  const handleProfilePress = (profile: Profile) => {
+    sheetRef.current?.open(
+      profile,
+      profile.id === currentProfileId
+    );
+  };
 
 const handleSwitchProfile = async (profile: Profile) => {
   await setCurrentProfileId(profile.id);
@@ -73,24 +73,24 @@ const handleSwitchProfile = async (profile: Profile) => {
   );
 };
 
-const handleEditProfile = () => {
-  if (!selectedProfile) return;
-  sheetRef.current?.close();
-  router.push({
-    pathname: "/family",
-    params: {
-      profileId: selectedProfile.id,
-    },
-  });
+  const handleEditProfile = (
+    profile: Profile
+  ) => {
+    router.push({
+      pathname: "/family",
+      params: {
+        profileId: profile.id,
+      },
+    });
 };
 
-const handleDeleteProfile = () => {
-  if (!selectedProfile) return;
+const handleDeleteProfile = (
+  profile: Profile
+) => {
 
-  sheetRef.current?.close();
-  Alert.alert(
+    Alert.alert(
     "Delete Profile",
-    `Delete ${selectedProfile.name}? This action cannot be undone.`,
+    `Delete ${profile.name}? This action cannot be undone.`,
     [
       {
         text: "Cancel",
@@ -101,7 +101,7 @@ const handleDeleteProfile = () => {
         style: "destructive",
         onPress: async () => {
           const result =
-            await removeFamilyMember(selectedProfile.id);
+            await removeFamilyMember(profile.id);
 
           if (!result.success) {
             showError(result.message!);
@@ -140,7 +140,15 @@ const familyMembers = profiles.filter(
 return (
   <SafeAreaView style={styles.container}>
     <View style={styles.header}>
-      <View>
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => router.back()}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="chevron-back" size={24} color={Colors.text} />
+      </TouchableOpacity>
+
+      <View style={styles.headerText}>
         <Text style={styles.title}>
           Family Members
         </Text>
@@ -212,10 +220,6 @@ return (
     />
     <FamilyActionSheet
       ref={sheetRef}
-      profile={selectedProfile}
-      isCurrent={
-        selectedProfile?.id === currentProfileId
-      }
       onSwitch={handleSwitchProfile}
       onEdit={handleEditProfile}
       onDelete={handleDeleteProfile}
@@ -269,6 +273,20 @@ header: {
   flexDirection: "row",
   justifyContent: "space-between",
   alignItems: "center",
+},
+
+backButton: {
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  backgroundColor: "#F3F4F6",
+  justifyContent: "center",
+  alignItems: "center",
+  marginRight: 10,
+},
+
+headerText: {
+  flex: 1,
 },
 
 

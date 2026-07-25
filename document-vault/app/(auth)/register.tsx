@@ -120,7 +120,7 @@ export default function RegisterScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <Text style={styles.logo}>
-            Document Vault
+            EzDocs - Document Vault
           </Text>
 
           <Text style={styles.heading}>

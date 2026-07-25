@@ -1,8 +1,9 @@
-import React, { forwardRef, useMemo } from "react";
+import React, { forwardRef } from "react";
 import { View, Text,  StyleSheet, Pressable } from "react-native";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import { Colors } from "@/src/constants/colors";
 import { BottomSheetBackdrop} from "@gorhom/bottom-sheet";
+import { ScrollView } from "react-native-gesture-handler";
 
 
 export type ActionItem = {
@@ -10,6 +11,7 @@ export type ActionItem = {
    icon?:string,
   onPress: () => void;
   destructive?: boolean;
+  
 };
 
 type ActionSheetProps = {
@@ -18,8 +20,7 @@ type ActionSheetProps = {
 };
 
 const ActionSheet = forwardRef<BottomSheet, ActionSheetProps>(
-  ({ title, actions }, ref) => {
-    const snapPoints = useMemo(() => ["40%"], []);
+  ({ title, actions  }, ref) => {
     const renderBackdrop = (props: any) => (
     <BottomSheetBackdrop
       {...props}
@@ -32,7 +33,7 @@ const ActionSheet = forwardRef<BottomSheet, ActionSheetProps>(
       <BottomSheet
         ref={ref}
         index={-1}
-        snapPoints={snapPoints}
+        enableDynamicSizing
         backdropComponent={renderBackdrop}
         enablePanDownToClose
         backgroundStyle={{
@@ -41,9 +42,11 @@ const ActionSheet = forwardRef<BottomSheet, ActionSheetProps>(
         }}
       >
         <BottomSheetView style={styles.container}>
-        <View style={styles.handle} />
           <Text style={styles.title}>{title}</Text>
-
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 20 }}
+          >
           {actions.map((action, index) => (
             <Pressable
               key={index}
@@ -72,6 +75,7 @@ const ActionSheet = forwardRef<BottomSheet, ActionSheetProps>(
               </Text>
             </Pressable>
           ))}
+          </ScrollView>
         </BottomSheetView>
       </BottomSheet>
     );
@@ -85,14 +89,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 10,
   },
-    handle: {
-    width: 45,
-    height: 5,
-    borderRadius: 999,
-    backgroundColor: "#D1D5DB",
-    alignSelf: "center",
-    marginBottom: 18,
-    },
 
   title: {
     fontSize: 20,

@@ -1,14 +1,6 @@
 
-import bcrypt from "bcryptjs";
+import { hashPassword } from "@/src/utils/password";
 import uuid from "react-native-uuid";
-
-bcrypt.setRandomFallback((len) => {
-  const buf = [];
-  for (let i = 0; i < len; i++) {
-    buf.push(Math.floor(Math.random() * 256));
-  }
-  return buf;
-});
 
 import { createUser, emailExists } from "@/src/database/userRepository";
 import { createProfile } from "@/src/database/profileRepository";
@@ -43,8 +35,7 @@ export async function registerUser(
     }
 
     // Hash password
-    const salt = bcrypt.genSaltSync(10);
-    const passwordHash = bcrypt.hashSync(data.password, salt);
+    const passwordHash = await hashPassword(data.password);
 
     // Generate IDs
     const userId = uuid.v4() as string;
