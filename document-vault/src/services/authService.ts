@@ -1,11 +1,9 @@
 
 import { hashPassword } from "@/src/utils/password";
 import uuid from "react-native-uuid";
-
 import { createUser, emailExists } from "@/src/database/userRepository";
 import { createProfile } from "@/src/database/profileRepository";
 import { createAppSettings } from "@/src/database/appSettingsRepository";
-import { saveUserSession } from "@/src/utils/authStorage";
 import { createNotificationSettings } from "@/src/database/notificationRepository";
 
 
@@ -20,14 +18,16 @@ type RegisterInput = {
 type RegisterResult = {
   success: boolean;
   message?: string;
+  userId?: string;
+  profileId?: string;
 };
 
-export async function registerUser(
-  data: RegisterInput
-): Promise<RegisterResult> {
+export async function registerUser( data: RegisterInput): Promise<RegisterResult> {
   try {
+    const normalizedEmail = data.email.trim().toLowerCase();
+
     // Check if email already exists
-    if (emailExists(data.email)) {
+    if (emailExists(normalizedEmail)) {
       return {
         success: false,
         message: "Email already registered.",
@@ -41,13 +41,13 @@ export async function registerUser(
     const userId = uuid.v4() as string;
     const profileId = uuid.v4() as string;
     const settingsId = uuid.v4() as string;
-
     const now = Date.now();
+    
 
     // Create User
       createUser({
         id: userId,
-        email: data.email,
+        email: normalizedEmail,
         passwordHash,
         googleDriveFolderId: null,
         createdAt: now,
@@ -58,11 +58,13 @@ export async function registerUser(
       id: profileId,
       userId :userId,
       name: data.fullName,
-      email: data.email,
+      email: normalizedEmail,
       phone: data.phone ?? null,
       address : data.address ?? null,
       pin: null,
       avatar: null,
+      role: 'MASTER_ADMIN',
+      sharedFolderId: null,
       isOwner: 1,
       createdAt: now,
     });
@@ -90,14 +92,10 @@ export async function registerUser(
       pushNotification: 1,
     });
 
-    // Save Session
-    await saveUserSession(
-      userId,
-      profileId,
-    );
-
     return {
       success: true,
+      userId,
+      profileId,
     };
   } catch (error) {
     console.error("Register Error:", error);

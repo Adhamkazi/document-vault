@@ -7,6 +7,8 @@ export type AppSettings = {
 
   biometricEnabled: number;
 
+  lastSyncedAt?: number | null;
+
   createdAt: number;
 
   updatedAt: number | null;

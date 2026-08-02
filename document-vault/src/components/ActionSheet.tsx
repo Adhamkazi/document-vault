@@ -1,17 +1,20 @@
 import React, { forwardRef } from "react";
 import { View, Text,  StyleSheet, Pressable } from "react-native";
-import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
+import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/src/constants/colors";
-import { BottomSheetBackdrop} from "@gorhom/bottom-sheet";
-import { ScrollView } from "react-native-gesture-handler";
+import {
+  BottomSheetModal,
+  BottomSheetBackdrop,
+  BottomSheetView,
 
+} from "@gorhom/bottom-sheet";
 
 export type ActionItem = {
   title: string;
    icon?:string,
   onPress: () => void;
   destructive?: boolean;
-  
+  tint?: string;
 };
 
 type ActionSheetProps = {
@@ -19,9 +22,11 @@ type ActionSheetProps = {
   actions: ActionItem[];
 };
 
-const ActionSheet = forwardRef<BottomSheet, ActionSheetProps>(
+const ActionSheet = forwardRef<BottomSheetModal, ActionSheetProps>(
   ({ title, actions  }, ref) => {
+    
     const renderBackdrop = (props: any) => (
+
     <BottomSheetBackdrop
       {...props}
       appearsOnIndex={0}
@@ -30,12 +35,13 @@ const ActionSheet = forwardRef<BottomSheet, ActionSheetProps>(
     />
   );
     return (
-      <BottomSheet
+      <BottomSheetModal
         ref={ref}
-        index={-1}
-        enableDynamicSizing
+        enableDynamicSizing={true}
+        animateOnMount={false}
         backdropComponent={renderBackdrop}
-        enablePanDownToClose
+        enablePanDownToClose={true}
+        maxDynamicContentSize={500}
         backgroundStyle={{
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
@@ -43,41 +49,46 @@ const ActionSheet = forwardRef<BottomSheet, ActionSheetProps>(
       >
         <BottomSheetView style={styles.container}>
           <Text style={styles.title}>{title}</Text>
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 20 }}
-          >
-          {actions.map((action, index) => (
-            <Pressable
-              key={index}
-              style={styles.item}
-              android_ripple={{ color: "#ECECEC" }}
+
+          {actions.map((action, index) => {
+            const tint = action.tint || (action.destructive ? Colors.error : undefined);
+            const textColor = tint || Colors.text;
+            const iconColor = tint || (action.destructive ? Colors.error : Colors.subtitle);
+
+            return (
+              <Pressable
+                key={index}
+                style={styles.item}
+                android_ripple={{ color: "#ECECEC" }}
                 onPress={() => {
-                if (
-                  ref &&
-                  typeof ref !== "function" &&
-                  ref.current
-                ) {
-                  ref.current.close();
-                }
-                setTimeout(() => {
-                  action.onPress();
-                }, 250);
+                  if (
+                    ref &&
+                    typeof ref !== "function" &&
+                    ref.current
+                  ) {
+                    ref.current.dismiss();
+                  }
+                  setTimeout(() => {
+                    action.onPress();
+                  }, 250);
                 }}
               >
-              <Text
-                style={[
-                  styles.itemText,
-                  action.destructive && styles.destructive,
-                ]}
-              >
-                {action.title}
-              </Text>
-            </Pressable>
-          ))}
-          </ScrollView>
+                {action.icon ? (
+                  <Ionicons
+                    name={action.icon as any}
+                    size={20}
+                    color={iconColor}
+                    style={styles.icon}
+                  />
+                ) : null}
+                <Text style={[styles.itemText, { color: textColor }]}>
+                  {action.title}
+                </Text>
+              </Pressable>
+            );
+          })}
         </BottomSheetView>
-      </BottomSheet>
+      </BottomSheetModal>
     );
   }
 );
@@ -101,6 +112,12 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#ECECEC",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  icon: {
+    marginRight: 12,
   },
 
   itemText: {

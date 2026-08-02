@@ -4,12 +4,15 @@ import React, {
   useRef,
   useState,
 } from "react";
-import BottomSheet from "@gorhom/bottom-sheet";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { router } from "expo-router";
 import * as Sharing from "expo-sharing";
 import { Alert } from "react-native";
 import ActionSheet from "@/src/components/ActionSheet";
 import type { DocumentRecord } from "@/src/types/document";
+import { useNavigation } from "expo-router";
+import { useEffect } from "react";
+
 
 export type DocumentActionSheetRef = {
   open: (document: DocumentRecord) => void;
@@ -26,16 +29,27 @@ const DocumentActionSheet = forwardRef<
   Props
 >(({ onDelete, showOption }, ref) => {
 
-  const sheetRef = useRef<BottomSheet>(null);
+  const sheetRef = useRef<BottomSheetModal>(null);
 
   const [selectedDocument, setSelectedDocument] =
     useState<DocumentRecord | null>(null);
     
+    const navigation = useNavigation();
+
+    useEffect(() => {
+      const unsubscribe = navigation.addListener("beforeRemove", () => {
+        sheetRef.current?.dismiss();
+    });
+
+  return unsubscribe;
+}, [navigation]);
 
   useImperativeHandle(ref, () => ({
     open(document) {
       setSelectedDocument(document);
-      sheetRef.current?.expand();
+       requestAnimationFrame(() => {
+            sheetRef.current?.present();
+        });
     },
   }));
 
@@ -64,7 +78,7 @@ const handleShare = async () => {
 
     await Sharing.shareAsync(selectedDocument.fileUri);
 
-    sheetRef.current?.close();
+    sheetRef.current?.dismiss();
   } catch (error) {
     console.error(error);
 
@@ -84,7 +98,7 @@ const handleShare = async () => {
               {
                 title: "View",
                 onPress: () => {
-                  sheetRef.current?.close();
+                  sheetRef.current?.dismiss();
 
                   router.push({
                     pathname: "/viewer",
@@ -99,7 +113,7 @@ const handleShare = async () => {
         {
           title: "Edit",
           onPress: () => {
-            sheetRef.current?.close();
+            sheetRef.current?.dismiss();
 
             router.push({
               pathname: "/modal",
@@ -113,7 +127,7 @@ const handleShare = async () => {
           title: "Delete",
           destructive: true,
           onPress: () => {
-            sheetRef.current?.close();
+            sheetRef.current?.dismiss();
             onDelete(selectedDocument);
           },
         },

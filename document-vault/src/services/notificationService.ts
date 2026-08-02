@@ -15,13 +15,13 @@ Notifications.setNotificationHandler({
 
 export async function registerForPushNotifications() {
 
-  if (!Device.isDevice) {
-    return false;
-  }
+  // if (!Device.isDevice) {
+  //   return false;
+  // }
 
-// if (!Device.isDevice) {
-//   console.log("Running on emulator");
-// }
+if (!Device.isDevice) {
+  console.log("Running on emulator");
+}
 
   const { status: existingStatus } =
     await Notifications.getPermissionsAsync();

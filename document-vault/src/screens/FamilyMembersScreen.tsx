@@ -11,18 +11,20 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import FamilyMemberCard from "@/src/components/Family/FamilyMemberCard";
 import { Colors } from "@/src/constants/colors";
-import { getProfilesByUserId } from "@/src/database/profileRepository";
-import { getCurrentUserId,getCurrentProfileId  } from "@/src/utils/authStorage";
+import { getProfileById, getProfilesByVaultOwnerEmail, getOwnerProfile } from "@/src/database/profileRepository";
+import { getCurrentProfileId  } from "@/src/utils/authStorage";
 import type { Profile } from "@/src/types/profile";
 import { Ionicons } from "@expo/vector-icons";
 import { Alert } from "react-native";
-import { setCurrentProfileId } from "@/src/utils/authStorage";
-import BottomSheet from "@gorhom/bottom-sheet";
 import FamilyActionSheet, { FamilyActionSheetRef } from "../components/Family/FamilyActionSheet";
 import { showSuccess,showError } from "@/src/utils/toast";
 import { removeFamilyMember } from "../services/addFamilyService";
+import { setupAndShareFamilyProfile } from "../services/profileService";
+import { useAuth } from "../context/AuthContext";
+import { syncAndRecoverFromDrive } from "../services/driveSyncService";
 
 export default function FamilyMembersScreen() {
+  const { switchProfile, user } = useAuth();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [currentProfileId, setCurrentProfileIdState] = useState("");
@@ -31,15 +33,30 @@ const sheetRef = useRef<FamilyActionSheetRef>(null);
 
   const loadProfiles = useCallback(async () => {
     try {
-      const userId = await getCurrentUserId ();
-      if (!userId) {
-        setProfiles([]);
-        return;
-      }
-      const activeProfile = await getCurrentProfileId();
-      setCurrentProfileIdState(activeProfile ?? "");
-      const data = getProfilesByUserId(userId);
-      setProfiles(data);
+    const activeProfileId = await getCurrentProfileId();
+
+        if (!activeProfileId) {
+          setProfiles([]);
+          return;
+        }
+
+        setCurrentProfileIdState(activeProfileId);
+
+        const activeProfile =
+          getProfileById(activeProfileId);
+
+        if (!activeProfile) {
+          setProfiles([]);
+          return;
+        }
+
+        const ownerEmail = activeProfile.vaultOwnerEmail ||  activeProfile.email;
+        if (!ownerEmail) {
+            setProfiles([]);
+            return;
+          }
+        const data = getProfilesByVaultOwnerEmail(ownerEmail);
+        setProfiles(data);
     } catch (error) {
       console.error("Failed to load profiles", error);
     }
@@ -58,19 +75,37 @@ const sheetRef = useRef<FamilyActionSheetRef>(null);
   };
 
   const handleProfilePress = (profile: Profile) => {
+    if (profile.id === currentProfileId) {
+     return;
+    }
     sheetRef.current?.open(
       profile,
       profile.id === currentProfileId
     );
   };
 
+  
+
 const handleSwitchProfile = async (profile: Profile) => {
-  await setCurrentProfileId(profile.id);
-  await loadProfiles();
-  showSuccess(
-    "Profile Switched",
-    `Now viewing ${profile.name}'s documents.`
-  );
+  try{
+   await switchProfile(profile.id);
+   // 2. Refresh local screen state if needed
+    if (typeof loadProfiles === "function") {
+      await loadProfiles();
+    }
+    showSuccess(
+      "Profile Switched",
+      `Now viewing ${profile.name}'s documents.`
+    );
+    // 3. Optional: Trigger a background sync specifically for the switched profile
+    if (user?.id) {
+      syncAndRecoverFromDrive(user.id, profile.id).catch((err) =>
+        console.log("Background profile sync error:", err)
+      );
+    }
+  }catch(error){
+    console.error("Error switching profile:", error);
+  }
 };
 
   const handleEditProfile = (
@@ -118,6 +153,29 @@ const handleDeleteProfile = (
   );
 };
 
+// Example function to call from an ActionSheet option
+const handleGrantAccessOnDemand = async (profile: Profile) => {
+  if (!profile.email) {
+    Alert.alert("Email Required", "Please edit this profile and add a valid Gmail address first.");
+    return;
+  }
+
+  const success = await setupAndShareFamilyProfile({
+    profileId: profile.id,
+    profileName: profile.name,
+    gmailAddress: profile.email,
+    role: "writer",
+  });
+  if (success) {
+    // Refresh so the profile's persisted sharedFolderId updates the
+    // action-sheet label to "Permission Granted" on next open.
+    await loadProfiles();
+    showSuccess(`Granted Drive permissions to ${profile.email}`);
+  } else {
+    showError("Could not grant Drive access. Please check network/auth.");
+  }
+}
+
 
   if (profiles.length === 0) {
     return (
@@ -135,6 +193,12 @@ const owner = profiles.find((p) => p.isOwner === 1);
 const familyMembers = profiles.filter(
   (p) => p.isOwner === 0
 );
+
+// Admin-only actions are gated by who is LOGGED IN (the vault owner's account),
+// not by which profile is currently active — otherwise a family member could
+// switch to the owner's profile and gain Edit/Delete/Grant access.
+const isViewerOwner = user ? !!getOwnerProfile(user.id) : false;
+
 
 
 return (
@@ -158,16 +222,14 @@ return (
         </Text>
       </View>
 
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => router.push("/family")}
-      >
-        <Ionicons
-          name="add"
-          size={22}
-          color="#FFF"
-        />
-      </TouchableOpacity>
+    {isViewerOwner && (
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => router.push("/family")}
+        >
+          <Ionicons name="add" size={22} color="#FFF" />
+        </TouchableOpacity>
+      )}
     </View>
 
     <FlatList
@@ -200,10 +262,9 @@ return (
         </>
       }
       ListEmptyComponent={
-        <FamilyMemberCard
-          empty
-          onAdd={() => router.push("/family")}
-        />
+        isViewerOwner ? (
+          <FamilyMemberCard empty onAdd={() => router.push("/family")} />
+        ) : null
       }
       data={familyMembers}
       keyExtractor={(item) => item.id}
@@ -220,9 +281,11 @@ return (
     />
     <FamilyActionSheet
       ref={sheetRef}
+      isViewerOwner={isViewerOwner}
       onSwitch={handleSwitchProfile}
       onEdit={handleEditProfile}
       onDelete={handleDeleteProfile}
+      onPermission={handleGrantAccessOnDemand}
     />
   </SafeAreaView>
 );
@@ -240,24 +303,29 @@ const styles = StyleSheet.create({
   },
 
 title: {
-  fontSize: 28,
+  fontSize: 24,
   fontWeight: "700",
   color: Colors.text,
 },
 
 subtitle: {
-  marginTop: 6,
-  fontSize: 15,
+  marginTop: 2,
+  fontSize: 13,
   color: Colors.subtitle,
 },
 
 addButton: {
-  width: 46,
-  height: 46,
-  borderRadius: 23,
+  width: 44,
+  height: 44,
+  borderRadius: 14,
   backgroundColor: Colors.primary,
   justifyContent: "center",
   alignItems: "center",
+  shadowColor: Colors.primary,
+  shadowOpacity: 0.25,
+  shadowRadius: 8,
+  shadowOffset: { width: 0, height: 4 },
+  elevation: 3,
 },
 
 
@@ -267,8 +335,8 @@ listContent: {
 },
 header: {
   paddingHorizontal: 20,
-  paddingTop: 12,
-  paddingBottom: 18,
+  paddingTop: 14,
+  paddingBottom: 16,
 
   flexDirection: "row",
   justifyContent: "space-between",
@@ -279,10 +347,12 @@ backButton: {
   width: 40,
   height: 40,
   borderRadius: 20,
-  backgroundColor: "#F3F4F6",
+  backgroundColor: Colors.card,
+  borderWidth: 1,
+  borderColor: Colors.border,
   justifyContent: "center",
   alignItems: "center",
-  marginRight: 10,
+  marginRight: 14,
 },
 
 headerText: {
@@ -291,11 +361,13 @@ headerText: {
 
 
 sectionTitle: {
-  fontSize: 18,
+  fontSize: 13,
   fontWeight: "700",
-  color: Colors.text,
+  color: Colors.subtitle,
+  textTransform: "uppercase",
+  letterSpacing: 0.6,
 
-  marginTop: 18,
-  marginBottom: 12,
+  marginTop: 24,
+  marginBottom: 10,
 },
 });

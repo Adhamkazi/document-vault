@@ -295,7 +295,11 @@ const validateForm = () => {
           {/* 1. Document Type Picker Button */}
           <Text style={styles.label}>Select Document Type *</Text>
           <TouchableOpacity
-            style={styles.pickerButton}
+             style={[
+                styles.pickerButton,
+                isEdit && styles.disabledPicker,
+              ]}
+            disabled={isEdit}
             onPress={() => {
               setSearchQuery("");
               setShowTypeModal(true);
@@ -600,46 +604,59 @@ const validateForm = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFF",
+    backgroundColor: Colors.background,
+  },
+  disabledPicker: {
+    opacity: 0.6,
   },
   content: {
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 32,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
-    marginTop: 10,
+    marginBottom: 4,
+    marginTop: 2,
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "700",
     color: Colors.text,
   },
   closeButton: {
-    padding: 6,
-    borderRadius: 20,
-    backgroundColor: "#F3F4F6",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   label: {
     fontSize: 14,
     fontWeight: "600",
     color: "#374151",
     marginBottom: 6,
-    marginTop: 14,
+    marginTop: 18,
   },
   pickerButton: {
     height: 56,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: Colors.border,
     borderRadius: 14,
     paddingHorizontal: 14,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#F9FAFB",
+    backgroundColor: Colors.card,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
   pickerLeft: {
     flexDirection: "row",
@@ -662,15 +679,15 @@ const styles = StyleSheet.create({
   input: {
     height: 52,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: Colors.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 15,
     color: Colors.text,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: Colors.card,
   },
   textArea: {
-    height: 80,
+    height: 84,
     paddingTop: 12,
     textAlignVertical: "top",
   },
@@ -682,10 +699,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   filePickerCard: {
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: Colors.primary,
     borderStyle: "dashed",
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 20,
     flexDirection: "row",
     alignItems: "center",
@@ -695,7 +712,7 @@ const styles = StyleSheet.create({
   filePickerIconCircle: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 14,
     backgroundColor: "#E0E7FF",
     justifyContent: "center",
     alignItems: "center",
@@ -732,9 +749,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 28,
     shadowColor: Colors.primary,
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
   saveButtonText: {
     color: "#FFF",
@@ -839,11 +857,10 @@ const styles = StyleSheet.create({
     datePickerButton: {
     height: 52,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: Colors.border,
     borderRadius: 12,
-    backgroundColor: "#FFF",
+    backgroundColor: Colors.card,
     paddingHorizontal: 14,
-
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",

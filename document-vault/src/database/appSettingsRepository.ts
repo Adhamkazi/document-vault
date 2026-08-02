@@ -10,6 +10,8 @@ export function initializeAppSettingsTable() {
       userId TEXT NOT NULL UNIQUE,
       biometricEnabled INTEGER DEFAULT 0,
       defaultProfileId TEXT,
+      googleDriveBackupFileId TEXT,
+      lastSyncedAt INTEGER,
       createdAt INTEGER NOT NULL,
       updatedAt INTEGER,
 
@@ -107,6 +109,28 @@ export function setBiometricEnabled(
       enabled,
       Date.now(),
       userId,
+    ]
+  );
+}
+
+export function updateLastSyncedAt(
+  userId: string,
+  timestamp: number
+) {
+  db.runSync(
+    `
+    INSERT INTO app_settings (id, userId, biometricEnabled, lastSyncedAt, createdAt, updatedAt)
+    VALUES (?, ?, 0, ?, ?, ?)
+    ON CONFLICT(userId) DO UPDATE SET
+      lastSyncedAt = excluded.lastSyncedAt,
+      updatedAt = excluded.updatedAt
+    `,
+    [
+      `settings-${userId}`,
+      userId,
+      timestamp,
+      Date.now(),
+      Date.now(),
     ]
   );
 }

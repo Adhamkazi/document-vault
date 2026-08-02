@@ -176,6 +176,28 @@ export function getTotalDocuments(
   return result?.total ?? 0;
 }
 
+export function getProfileStorageStats(
+  profileId: string
+): { count: number; totalBytes: number } {
+  const result = db.getFirstSync<{
+    count: number;
+    totalBytes: number | null;
+  }>(
+    `
+    SELECT COUNT(*) as count,
+           SUM(fileSize) as totalBytes
+    FROM documents
+    WHERE profileId = ?
+    `,
+    [profileId]
+  );
+
+  return {
+    count: result?.count ?? 0,
+    totalBytes: result?.totalBytes ?? 0,
+  };
+}
+
 export function getExpiringDocuments(
   profileId: string,
   days: number = 30
@@ -214,5 +236,14 @@ export function getExpiringDocuments(
       profileId,
       endDateString,
     ]
+  );
+}
+
+export function updateDocumentFileUri(id: string, fileUri: string) {
+  db.runSync(
+    `UPDATE documents 
+     SET fileUri = ?, updatedAt = ? 
+     WHERE id = ?`,
+    [fileUri, Date.now(), id]
   );
 }

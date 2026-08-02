@@ -10,11 +10,20 @@ import { initializeDatabase } from '@/src/database/migrations';
 import Toast from "react-native-toast-message";
 import { toastConfig } from "@/src/config/toastConfig";
 import { registerForPushNotifications } from "@/src/services/notificationService";
-
+import { AuthProvider } from '../src/context/AuthContext';
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { checkProfiles, cleanupDuplicateProfiles, cleanupProfiles } from '@/src/database/cleanUpFunctions';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [isDbReady, setIsDbReady] = useState(false);
+
+//   useEffect(() => {
+// // //   checkProfiles();
+// cleanupProfiles()
+//  cleanupDuplicateProfiles() 
+
+//   },[]);
 
   useEffect(() => {
     async function setupApp() {
@@ -41,7 +50,9 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <AuthProvider>
       <GestureHandlerRootView style={{ flex: 1 }}>
+         <BottomSheetModalProvider>
        <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(tabs)" />
@@ -55,7 +66,9 @@ export default function RootLayout() {
         </Stack>
         <StatusBar style="auto" />
         <Toast config={toastConfig} />
+        </BottomSheetModalProvider>
       </GestureHandlerRootView>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

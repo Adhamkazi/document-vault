@@ -19,6 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
 import { getProfileById } from "../database/profileRepository";
 import {showSuccess} from "@/src/utils/toast";
+import { Switch } from "react-native";
 
 export default function AddFamilyScreen() {
   const [saving, setSaving] = useState(false);
@@ -26,6 +27,7 @@ export default function AddFamilyScreen() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
+  const [grantDriveAccess, setGrantDriveAccess] = useState(false);
 
   const { profileId } = useLocalSearchParams();
 
@@ -48,12 +50,14 @@ export default function AddFamilyScreen() {
           email,
           phone,
           address,
+          grantDriveAccess
         })
       : await addFamilyMember({
           name,
           email,
           phone,
           address,
+          grantDriveAccess
         });
     if (!result.success) {
       Alert.alert(
@@ -185,6 +189,22 @@ useEffect(() => {
           onChangeText={setAddress}
         />
 
+        {email.trim().length > 0 && (
+          <View style={styles.switchContainer}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>Grant Google Drive Access</Text>
+              <Text style={styles.helperText}>
+                Share this profile's EzDocs folder with {email}
+              </Text>
+            </View>
+            <Switch
+              value={grantDriveAccess}
+              onValueChange={setGrantDriveAccess}
+              trackColor={{ false: "#D1D5DB", true: Colors.primary }}
+            />
+          </View>
+        )}
+
         {/* Buttons */}
 
         <View style={styles.footer}>
@@ -224,6 +244,26 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFF",
+  },
+
+  switchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#F9FAFB", // Light gray background to highlight the setting
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  helperText: {
+    fontSize: 13,
+    color: "#6B7280",
+    marginTop: 4,
+    marginRight: 16, // Prevents text from touching the switch
+    lineHeight: 18,
   },
 
   content: {

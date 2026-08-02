@@ -1,7 +1,7 @@
 import { getCurrentProfileId } from "@/src/utils/authStorage";
 import {
   getProfileById,
-  getProfilesByUserId,
+  getProfilesByVaultOwnerEmail
 } from "@/src/database/profileRepository";
 import {
   getTotalDocuments,
@@ -51,8 +51,10 @@ const expiringSoon =
   expiringDocuments.length;
 
 
+  
+
   const totalProfiles =
-    getProfilesByUserId(profile.userId).length;
+    getProfilesByVaultOwnerEmail(profile?.vaultOwnerEmail!).length;
 
   return {
     totalDocuments,

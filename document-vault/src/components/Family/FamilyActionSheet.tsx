@@ -1,35 +1,49 @@
 import React, {
   forwardRef,
+  useEffect,
   useImperativeHandle,
   useRef,
   useState,
 } from "react";
-import BottomSheet from "@gorhom/bottom-sheet";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
 
 import ActionSheet, {
   ActionItem,
 } from "@/src/components/ActionSheet";
 
 import type { Profile } from "@/src/types/profile";
+import { useNavigation } from "expo-router";
+import { Colors } from "@/src/constants/colors";
 
 export type FamilyActionSheetRef = {
   open: (profile: Profile, isCurrent: boolean) => void;
 };
 
 type Props = {
+  isViewerOwner: boolean;
   onSwitch: (profile: Profile) => void;
   onEdit: (profile: Profile) => void;
   onDelete: (profile: Profile) => void;
+  onPermission : (profile: Profile) => void;
 };
 
 const FamilyActionSheet = forwardRef<
   FamilyActionSheetRef,
   Props
->(({ onSwitch, onEdit, onDelete }, ref) => {
-  const sheetRef = useRef<BottomSheet>(null);
+>(({ isViewerOwner,onSwitch, onEdit, onDelete , onPermission}, ref) => {
+  const sheetRef = useRef<BottomSheetModal>(null);
 
   const [selectedProfile, setSelectedProfile] =
     useState<Profile | null>(null);
+
+  const navigation = useNavigation();
+      
+  useEffect(() => {
+     const unsubscribe = navigation.addListener("beforeRemove", () => {
+      sheetRef.current?.dismiss();
+    }); 
+    return unsubscribe;
+  }, [navigation]);
 
   const [isCurrentProfile, setIsCurrentProfile] =
     useState(false);
@@ -40,7 +54,7 @@ const FamilyActionSheet = forwardRef<
       setIsCurrentProfile(isCurrent);
 
       requestAnimationFrame(() => {
-        sheetRef.current?.expand();
+        sheetRef.current?.present();;
       });
     },
   }));
@@ -56,13 +70,29 @@ const FamilyActionSheet = forwardRef<
       });
     }
 
-    actions.push({
-      title: "Edit Profile",
-      icon: "create-outline",
-      onPress: () => onEdit(selectedProfile),
-    });
+        // 2. Restrict options: Only allow Edit, Grant Permission, and Delete if NOT the Owner
+    if (isViewerOwner && !selectedProfile.isOwner) {
+      actions.push({
+        title: "Edit Profile",
+        icon: "create-outline",
+        onPress: () => onEdit(selectedProfile),
+      });
 
-    if (!selectedProfile.isOwner) {
+      if (selectedProfile.email) {
+        const hasDrivePermission = !!selectedProfile.sharedFolderId;
+
+        actions.push({
+          title: hasDrivePermission
+            ? "Permission Granted"
+            : "Grant Drive Permission",
+          icon: hasDrivePermission
+            ? "checkmark-circle"
+            : "cloud-upload-outline",
+          tint: hasDrivePermission ? Colors.success : undefined,
+          onPress: () => onPermission(selectedProfile),
+        });
+      }
+
       actions.push({
         title: "Delete Profile",
         icon: "trash-outline",
@@ -71,6 +101,7 @@ const FamilyActionSheet = forwardRef<
       });
     }
   }
+
 
   return (
     <ActionSheet

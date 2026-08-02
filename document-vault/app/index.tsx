@@ -1,7 +1,7 @@
 import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import { getUserId } from '@/src/utils/authStorage';
+import { getCurrentUserId } from '@/src/utils/authStorage';
 
 export default function Index() {
   const [loading, setLoading] = useState(true);
@@ -10,7 +10,7 @@ export default function Index() {
   useEffect(() => {
     async function checkAuth() {
       try {
-        const userId = await getUserId();
+        const userId = await getCurrentUserId();
         setHasSession(!!userId);
       } catch (error) {
         setHasSession(false);

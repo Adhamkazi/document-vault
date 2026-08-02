@@ -13,11 +13,14 @@ export function initializeProfilesTable() {
       address TEXT,
       pin TEXT,
       avatar TEXT,
+      role TEXT DEFAULT 'FAMILY_MEMBER',
+      vaultOwnerEmail TEXT NOT NULL,
+      sharedFolderId TEXT,
       isOwner INTEGER NOT NULL DEFAULT 0,
       createdAt INTEGER NOT NULL,
       FOREIGN KEY(userId)
-      REFERENCES users(id)
-
+      REFERENCES users(id),
+      UNIQUE(userId, name)
     );
   `);
 }
@@ -36,10 +39,13 @@ export function createProfile(profile: Profile) {
       address,
       pin,
       avatar,
+      role,
+      vaultOwnerEmail,
+      sharedFolderId,
       isOwner,
       createdAt
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       profile.id,
@@ -50,6 +56,9 @@ export function createProfile(profile: Profile) {
       profile.address ?? null,
       profile.pin ?? null,
       profile.avatar ?? null,
+      profile.role ?? 'FAMILY_MEMBER',
+      profile.vaultOwnerEmail ?? "",
+      profile.sharedFolderId ?? null,
       profile.isOwner,
       profile.createdAt,
     ]
@@ -142,5 +151,21 @@ export function getOwnerProfile(
     LIMIT 1
     `,
     [userId]
+  );
+}
+
+
+export function getProfilesByVaultOwnerEmail(
+  ownerEmail: string
+) {
+  return db.getAllSync<Profile>(
+    `
+      SELECT *
+      FROM profiles
+      WHERE LOWER(TRIM(vaultOwnerEmail)) = LOWER(TRIM(?))
+         OR LOWER(TRIM(email)) = LOWER(TRIM(?))
+      ORDER BY isOwner DESC, name ASC
+    `,
+    [ownerEmail, ownerEmail]
   );
 }

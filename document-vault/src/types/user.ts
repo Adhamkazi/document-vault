@@ -5,6 +5,8 @@ export type User = {
 
   passwordHash: string;
 
+  authProvider?: string;
+
   googleDriveFolderId: string | null;
 
   createdAt: number;

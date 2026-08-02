@@ -8,6 +8,7 @@ export function initializeUsersTable() {
       id TEXT PRIMARY KEY NOT NULL,
       email TEXT NOT NULL UNIQUE,
       passwordHash TEXT NOT NULL,
+      authProvider TEXT NOT NULL DEFAULT 'LOCAL',
       googleDriveFolderId TEXT,
       createdAt INTEGER NOT NULL
     );
@@ -23,19 +24,41 @@ export function createUser(user: User) {
       id,
       email,
       passwordHash,
+      authProvider,
       googleDriveFolderId,
       createdAt
     )
-    VALUES (?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?)
     `,
     [
       user.id,
       user.email,
       user.passwordHash,
+      user.authProvider || 'LOCAL',
       user.googleDriveFolderId ?? null,
       user.createdAt,
     ]
   );
+}
+
+export function updateUserDriveRootFolder(userId: string, googleDriveFolderId: string) {
+  db.runSync(
+    `UPDATE users SET googleDriveFolderId = ? WHERE id = ?`,
+    [googleDriveFolderId, userId]
+  );
+}
+
+export function getUserDriveRootFolder(userId: string): string | null {
+  const result = db.getFirstSync<{ googleDriveFolderId: string | null }>(
+    `
+    SELECT googleDriveFolderId
+    FROM users
+    WHERE id = ?
+    `,
+    [userId]
+  );
+
+  return result?.googleDriveFolderId ?? null;
 }
 
 export function getUserByEmail(

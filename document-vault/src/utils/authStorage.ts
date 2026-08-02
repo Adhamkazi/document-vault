@@ -11,6 +11,16 @@ export async function saveUserSession(
   await SecureStore.setItemAsync(PROFILE_ID_KEY, profileId);
 }
 
+export async function getUserSession() {
+  const userId = await SecureStore.getItemAsync(USER_ID_KEY);
+  const profileId = await SecureStore.getItemAsync(PROFILE_ID_KEY);
+  if (userId && profileId) {
+    return { userId, profileId };
+  }
+  return null;
+}
+
+
 export async function getCurrentUserId() {
   return SecureStore.getItemAsync(USER_ID_KEY);
 }
@@ -28,7 +38,12 @@ export async function setCurrentProfileId(
   );
 }
 
-export async function clearSession() {
+
+export async function clearUserSession() {
   await SecureStore.deleteItemAsync(USER_ID_KEY);
   await SecureStore.deleteItemAsync(PROFILE_ID_KEY);
+}
+
+export async function clearSession() {
+  await clearUserSession();
 }

@@ -21,6 +21,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { deleteDocument } from "@/src/database/documentRepository";
 import { deleteFile } from "@/src/utils/fileStorage";
 import DocumentActionSheet, { DocumentActionSheetRef} from "@/src/components/documents/DocumentActionSheet";
+import { deleteDocumentFileAndCleanFolder, deleteFileFromDrive } from "../services/driveSyncService";
 
 
 export default function DocumentsScreen() {
@@ -31,9 +32,7 @@ export default function DocumentsScreen() {
   useRef<DocumentActionSheetRef>(null);
 
 
-  const handleDeleteDocument = (
-  document: DocumentRecord
-) => {
+const handleDeleteDocument = (document: DocumentRecord) => {
   Alert.alert(
     "Delete Document",
     `Are you sure you want to delete "${document.title}"?`,
@@ -47,19 +46,34 @@ export default function DocumentsScreen() {
         style: "destructive",
         onPress: async () => {
           try {
-            await deleteFile(
-              document.fileUri
-            );
+            // 1. Attempt Drive deletion safely (non-blocking for local delete)
+            if (document.googleDriveFileId) {
+              try {
+                await deleteDocumentFileAndCleanFolder(document.googleDriveFileId);
+              } catch (driveErr) {
+                console.warn(
+                  "Google Drive deletion failed/offline. Proceeding with local delete:",
+                  driveErr
+                );
+              }
+            }
 
+            // 2. Delete local physical file from phone storage
+            if (document.fileUri) {
+              await deleteFile(document.fileUri);
+            }
+
+            // 3. Remove document record from local SQLite database
             deleteDocument(document.id);
 
+            // 4. Refresh UI state
             loadDocuments();
           } catch (error) {
-            console.error(error);
+            console.error("Failed to delete local document:", error);
 
             Alert.alert(
               "Error",
-              "Unable to delete document."
+              "Unable to delete document from device."
             );
           }
         },
@@ -67,7 +81,6 @@ export default function DocumentsScreen() {
     ]
   );
 };
-
   const loadDocuments = async () => {
     const profileId = await getCurrentProfileId();
     if (!profileId) return;
@@ -91,7 +104,15 @@ export default function DocumentsScreen() {
         >
           <Ionicons name="chevron-back" size={24} color={Colors.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>My Documents</Text>
+
+        <View style={styles.headerText}>
+          <Text style={styles.title}>My Documents</Text>
+          <Text style={styles.subtitle}>
+            {documents.length === 0
+              ? "No documents stored"
+              : `${documents.length} Document${documents.length > 1 ? "s" : ""}`}
+          </Text>
+        </View>
       </View>
 
       <FlatList
@@ -138,24 +159,36 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
-    paddingTop: 16,
-    paddingBottom: 10,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 14,
   },
 
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 8,
+    marginRight: 14,
+  },
+
+  headerText: {
+    flex: 1,
   },
 
   title: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: "700",
     color: Colors.text,
+  },
+
+  subtitle: {
+    marginTop: 2,
+    fontSize: 13,
+    color: "#6B7280",
   },
 });

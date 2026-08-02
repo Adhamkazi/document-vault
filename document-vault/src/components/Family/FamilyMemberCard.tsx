@@ -26,6 +26,7 @@ export default function FamilyMemberCard({
   onAdd,
 }: Props) {
 
+
   if (empty) {
     return (
       <View style={styles.emptyContainer}>
@@ -67,52 +68,44 @@ export default function FamilyMemberCard({
 
   if (!profile) return null;
 
+  const initial = (profile.name || "?").charAt(0).toUpperCase();
+
   return (
     <TouchableOpacity
-      style={styles.card}
+      style={[styles.card, isCurrent && styles.cardCurrent]}
       activeOpacity={0.85}
       onPress={onPress}
     >
       <View style={styles.left}>
         <View style={styles.avatar}>
-          <Ionicons
-            name={
-              profile.isOwner
-                ? "person-circle"
-                : "person-outline"
-            }
-            size={24}
-            color={Colors.primary}
-          />
+          <Text style={styles.avatarText}>{initial}</Text>
         </View>
 
         <View style={styles.textContainer}>
           <View style={styles.nameRow}>
-            <Text style={styles.name}>
+            <Text style={styles.name} numberOfLines={1}>
               {profile.name}
             </Text>
 
             {isCurrent && (
               <View style={styles.currentBadge}>
-                <Text style={styles.currentText}>
-                  Current
-                </Text>
+                <Text style={styles.currentText}>Active</Text>
               </View>
             )}
           </View>
-         <Text style={styles.subtitle}>
-            {profile.isOwner === 1
-              ? "Owner" 
-              : "Family Member"}
+          <Text style={styles.subtitle}>
+            {profile.email || (profile.isOwner === 1 ? "Owner" : "Family Member")}
           </Text>
         </View>
       </View>
 
-      <Ionicons
-        name="chevron-forward"
-        size={20}
-        color={Colors.subtitle}
-      />
+      <View style={styles.chevron}>
+        <Ionicons
+          name="chevron-forward"
+          size={18}
+          color={Colors.subtitle}
+        />
+      </View>
     </TouchableOpacity>
   );
 }
@@ -120,22 +113,29 @@ export default function FamilyMemberCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.card,
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 14,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 12,
 
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
 
+    borderWidth: 1,
+    borderColor: Colors.border,
     shadowColor: "#000",
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.04,
     shadowRadius: 8,
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    elevation: 2,
+    elevation: 1,
+  },
+
+  cardCurrent: {
+    borderColor: "#BFDBFE",
+    backgroundColor: "#F9FBFF",
   },
 
   left: {
@@ -145,12 +145,18 @@ const styles = StyleSheet.create({
   },
 
   avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: "#EEF4FF",
     justifyContent: "center",
     alignItems: "center",
+  },
+
+  avatarText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: Colors.primary,
   },
 
   textContainer: {
@@ -166,8 +172,18 @@ const styles = StyleSheet.create({
 
   subtitle: {
     marginTop: 4,
-    fontSize: 14,
+    fontSize: 13,
     color: Colors.subtitle,
+  },
+
+  chevron: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#F3F6FC",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
   },
 
   emptyContainer: {

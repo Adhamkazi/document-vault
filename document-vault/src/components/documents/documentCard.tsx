@@ -9,7 +9,6 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { Colors } from "@/src/constants/colors";
 import type { DocumentRecord } from "@/src/types/document";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 type Props = {
   document: DocumentRecord;
@@ -22,66 +21,64 @@ export default function DocumentCard({
   onPress,
   onMorePress
 }: Props) {
+
+  const displayTitle = document.documentTypeName || document.title;
+
   return (
     <TouchableOpacity
       style={styles.card}
-      activeOpacity={0.8}
+      activeOpacity={0.85}
       onPress={onPress}
     >
+      <View style={styles.iconTile}>
+        <Ionicons name="document-text-outline" size={22} color={Colors.primary} />
+      </View>
+
       <View style={styles.info}>
-        <Text style={styles.title}>
-          {document.title}
+        <Text style={styles.title} numberOfLines={1}>
+          {displayTitle}
         </Text>
 
-        <Text style={styles.subtitle}>
-          {document.documentNumber || "No Document Number"}
+        <Text style={styles.subtitle} numberOfLines={1}>
+          {document.documentNumber || document.fileName || "No Document Number"}
         </Text>
       </View>
 
-      <View style={styles.iconContainer}>
-        <TouchableOpacity
-            onPress={onMorePress}
-            hitSlop={10}
-          >
-            <Ionicons
-                name="ellipsis-vertical"
-                size={22}
-                color="#777"
-            />
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity
+        onPress={onMorePress}
+        hitSlop={12}
+        style={styles.moreButton}
+      >
+        <Ionicons name="ellipsis-horizontal" size={20} color={Colors.subtitle} />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#FFF",
-    padding: 16,
-    borderRadius: 14,
-
+    backgroundColor: Colors.card,
+    padding: 14,
+    borderRadius: 16,
     flexDirection: "row",
     alignItems: "center",
-
-    marginBottom: 14,
-
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
     shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
 
-  iconContainer: {
-    width: 48,
-    height: 48,
-
-    borderRadius: 24,
-
+  iconTile: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: "#EEF4FF",
-
     justifyContent: "center",
     alignItems: "center",
-
     marginRight: 14,
   },
 
@@ -99,5 +96,14 @@ const styles = StyleSheet.create({
     marginTop: 3,
     fontSize: 13,
     color: "#6B7280",
+  },
+
+  moreButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 6,
   },
 });
